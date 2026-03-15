@@ -21,14 +21,14 @@ class RateHandler:
             rates = self._currency_service.get_currency_rate(currency)
 
             if not rates:
-                await message.answer(f"Unable to retrieve rates for {currency}.")
+                await message.answer(f"Unable to retrieve exchange rates for {currency}.")
                 return
 
             eur = rates.get("EUR")
             gbp = rates.get("GBP")
             pln = rates.get("PLN")
 
-            lines = [f"Exchange rate for {currency}:"]
+            lines = [f"Exchange rates for {currency}:"]
 
             if eur is not None:
                 lines.append(f"EUR: {eur}")
@@ -39,6 +39,5 @@ class RateHandler:
 
             await message.answer("\n".join(lines))
 
-        except Exception as error:
-            print(f"RateHandler error: {error}")
-            await message.answer(f"Error retrieving exchange rate: {error}")
+        except Exception:
+            await message.answer("Error retrieving exchange rates.")
