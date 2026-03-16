@@ -1,65 +1,83 @@
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+
+from aiogram import Router, F
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from app.services.currency_service import CurrencyService
-from app.validators.currency_validator import CurrencyValidator
+from app.bot.states.conversion_state import ConversionState
 
 
-class ConvertHandler:
-    def __init__(
-        self,
-        currency_service: CurrencyService,
-        currency_validator: CurrencyValidator,
-    ) -> None:
-        self._currency_service = currency_service
-        self._currency_validator = currency_validator
+router = Router()
 
-    async def handle(self, message: Message) -> None:
-        text = (message.text or "").strip()
-        parts = text.split()
 
-        if len(parts) != 4:
-            await message.answer("Usage: /convert 100 USD PLN")
-            return
+CURRENCY_FLAGS = {
+    "USD": "🇺🇸",
+    "EUR": "🇪🇺",
+    "PLN": "🇵🇱",
+    "GBP": "🇬🇧",
+}
 
-        try:
-            amount = float(parts[1])
-        except ValueError:
-            await message.answer("Amount must be a number.")
-            return
 
-        if amount <= 0:
-            await message.answer("Amount must be greater than zero.")
-            return
+def get_currency_flag(currency: str) -> str:
+    return CURRENCY_FLAGS.get(currency.upper(), "🏳️")
 
-        from_currency = parts[2].upper()
-        to_currency = parts[3].upper()
 
-        if not self._currency_validator.is_valid_currency(from_currency):
-            await message.answer(
-                f"Unsupported source currency: {from_currency}. Example: USD, EUR, PLN."
-            )
-            return
+def format_decimal(value: Decimal) -> str:
+    return str(value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
-        if not self._currency_validator.is_valid_currency(to_currency):
-            await message.answer(
-                f"Unsupported target currency: {to_currency}. Example: USD, EUR, PLN."
-            )
-            return
 
-        try:
-            result = self._currency_service.convert_currency(
-                amount=amount,
-                from_currency=from_currency,
-                to_currency=to_currency,
-            )
+@router.message(ConversionState.waiting_for_amount, F.text)
+async def process_conversion_amount(
+    message: Message,
+    state: FSMContext,
+    currency_service: CurrencyService,
+) -> None:
+    raw_amount = (message.text or "").strip().replace(",", ".")
 
-            if result is None:
-                await message.answer("Conversion failed.")
-                return
+    try:
+        amount = Decimal(raw_amount)
+    except InvalidOperation:
+        await message.answer("Please enter a valid number, for example: 100 or 12.50.")
+        return
 
-            await message.answer(
-                f"{amount:g} {from_currency} = {result:.2f} {to_currency}"
-            )
+    if amount <= 0:
+        await message.answer("Amount must be greater than 0.")
+        return
 
-        except Exception:
-            await message.answer("Error converting currency.")
+    data = await state.get_data()
+    base_currency = data.get("base_currency")
+    target_currency = data.get("target_currency")
+
+    if not base_currency or not target_currency:
+        await message.answer("Currency data not found. Please restart with /start.")
+        await state.clear()
+        return
+
+    try:
+        converted_amount = currency_service.convert_currency(
+            amount=float(amount),
+            from_currency=base_currency,
+            to_currency=target_currency,
+        )
+    except Exception as error:
+        await message.answer(f"Conversion failed: {error}")
+        await state.clear()
+        return
+
+    if converted_amount is None:
+        await message.answer("Conversion failed. Please try again later.")
+        await state.clear()
+        return
+
+    base_flag = get_currency_flag(base_currency)
+    target_flag = get_currency_flag(target_currency)
+
+    response_text = (
+        f"💱 Currency Conversion\n\n"
+        f"{base_flag} {format_decimal(amount)} {base_currency} = "
+        f"{target_flag} {Decimal(str(converted_amount)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)} {target_currency}"
+    )
+
+    await message.answer(response_text)
+    await state.clear()
