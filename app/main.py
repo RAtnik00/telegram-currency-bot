@@ -9,6 +9,7 @@ from app.bot.handlers.start_handler import StartHandler
 from app.clients.currency_api_client import CurrencyApiClient
 from app.config.settings import Settings
 from app.services.currency_service import CurrencyService
+from app.validators.currency_validator import CurrencyValidator
 
 
 async def main() -> None:
@@ -19,10 +20,11 @@ async def main() -> None:
 
     api_client = CurrencyApiClient()
     currency_service = CurrencyService(api_client)
+    currency_validator = CurrencyValidator()
 
     start_handler = StartHandler()
-    rate_handler = RateHandler(currency_service)
-    convert_handler = ConvertHandler(currency_service)
+    rate_handler = RateHandler(currency_service, currency_validator)
+    convert_handler = ConvertHandler(currency_service, currency_validator)
 
     dp.message.register(start_handler.handle, Command("start"))
     dp.message.register(start_handler.handle, Command("help"))

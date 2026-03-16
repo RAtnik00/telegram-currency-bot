@@ -1,11 +1,17 @@
 from aiogram.types import Message
 
 from app.services.currency_service import CurrencyService
+from app.validators.currency_validator import CurrencyValidator
 
 
 class RateHandler:
-    def __init__(self, currency_service: CurrencyService) -> None:
+    def __init__(
+        self,
+        currency_service: CurrencyService,
+        currency_validator: CurrencyValidator,
+    ) -> None:
         self._currency_service = currency_service
+        self._currency_validator = currency_validator
 
     async def handle(self, message: Message) -> None:
         text = (message.text or "").strip()
@@ -16,6 +22,12 @@ class RateHandler:
             return
 
         currency = parts[1].upper()
+
+        if not self._currency_validator.is_valid_currency(currency):
+            await message.answer(
+                "Unsupported currency. Please use a valid ISO code like USD, EUR, or PLN."
+            )
+            return
 
         try:
             rates = self._currency_service.get_currency_rate(currency)
