@@ -51,5 +51,5 @@ class RateHandler:
 
             await message.answer("\n".join(lines))
 
-        except Exception:
-            await message.answer("Error retrieving exchange rates.")
+        except Exception as error:
+            await message.answer(f"Error retrieving exchange rates: {error}")
