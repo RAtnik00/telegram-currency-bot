@@ -1,29 +1,37 @@
 import asyncio
 
-from app.bot.bot_app import BotApplication
+from aiogram import Bot, Dispatcher
+from aiogram.filters import Command
+
+from app.bot.handlers.convert_handler import ConvertHandler
 from app.bot.handlers.rate_handler import RateHandler
 from app.bot.handlers.start_handler import StartHandler
 from app.clients.currency_api_client import CurrencyApiClient
 from app.config.settings import Settings
 from app.services.currency_service import CurrencyService
+from app.validators.currency_validator import CurrencyValidator
 
 
 async def main() -> None:
     settings = Settings.from_env()
 
+    bot = Bot(token=settings.telegram_token)
+    dp = Dispatcher()
+
     api_client = CurrencyApiClient()
     currency_service = CurrencyService(api_client)
+    currency_validator = CurrencyValidator()
 
     start_handler = StartHandler()
-    rate_handler = RateHandler(currency_service)
+    rate_handler = RateHandler(currency_service, currency_validator)
+    convert_handler = ConvertHandler(currency_service, currency_validator)
 
-    bot_app = BotApplication(
-        settings=settings,
-        start_handler=start_handler,
-        rate_handler=rate_handler,
-    )
+    dp.message.register(start_handler.handle, Command("start"))
+    dp.message.register(start_handler.handle, Command("help"))
+    dp.message.register(rate_handler.handle, Command("rate"))
+    dp.message.register(convert_handler.handle, Command("convert"))
 
-    await bot_app.run()
+    await dp.start_polling(bot)
 
 
 if __name__ == "__main__":

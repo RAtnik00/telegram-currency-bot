@@ -1,11 +1,17 @@
 from aiogram.types import Message
 
 from app.services.currency_service import CurrencyService
+from app.validators.currency_validator import CurrencyValidator
 
 
 class RateHandler:
-    def __init__(self, currency_service: CurrencyService) -> None:
+    def __init__(
+        self,
+        currency_service: CurrencyService,
+        currency_validator: CurrencyValidator,
+    ) -> None:
         self._currency_service = currency_service
+        self._currency_validator = currency_validator
 
     async def handle(self, message: Message) -> None:
         text = (message.text or "").strip()
@@ -17,18 +23,24 @@ class RateHandler:
 
         currency = parts[1].upper()
 
+        if not self._currency_validator.is_valid_currency(currency):
+            await message.answer(
+                "Unsupported currency. Please use a valid ISO code like USD, EUR, or PLN."
+            )
+            return
+
         try:
             rates = self._currency_service.get_currency_rate(currency)
 
             if not rates:
-                await message.answer(f"Unable to retrieve rates for {currency}.")
+                await message.answer(f"Unable to retrieve exchange rates for {currency}.")
                 return
 
             eur = rates.get("EUR")
             gbp = rates.get("GBP")
             pln = rates.get("PLN")
 
-            lines = [f"Exchange rate for {currency}:"]
+            lines = [f"Exchange rates for {currency}:"]
 
             if eur is not None:
                 lines.append(f"EUR: {eur}")
@@ -40,5 +52,4 @@ class RateHandler:
             await message.answer("\n".join(lines))
 
         except Exception as error:
-            print(f"RateHandler error: {error}")
-            await message.answer(f"Error retrieving exchange rate: {error}")
+            await message.answer(f"Error retrieving exchange rates: {error}")
