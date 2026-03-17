@@ -10,13 +10,14 @@ from aiogram.enums import ParseMode
 from aiogram.filters import Command
 from aiogram.fsm.storage.memory import MemoryStorage
 
-from app.bot.handlers.start_handler import StartHandler
-from app.bot.handlers.rate_handler import RateHandler
 from app.bot.handlers.callback_handler import CurrencyCallbackHandler
 from app.bot.handlers.convert_handler import router as convert_router
-from app.bot.handlers.operation_handler import router as operation_handler
+from app.bot.handlers.operation_handler import router as operation_router
+from app.bot.handlers.rate_handler import RateHandler
+from app.bot.handlers.start_handler import StartHandler
 from app.cache.currency_cache import CurrencyCache
 from app.clients.currency_api_client import CurrencyApiClient
+from app.clients.nbp_cash_rates_client import NbpCashRatesClient
 from app.services.currency_service import CurrencyService
 from app.validators.currency_validator import CurrencyValidator
 
@@ -44,11 +45,14 @@ async def main() -> None:
 
     storage = MemoryStorage()
 
-    api_client = CurrencyApiClient()
+    general_api_client = CurrencyApiClient()
+    cash_api_client = NbpCashRatesClient()
     cache = CurrencyCache(ttl_seconds=300)
     currency_validator = CurrencyValidator()
+
     currency_service = CurrencyService(
-        api_client=api_client,
+        general_rates_provider=general_api_client,
+        cash_rates_provider=cash_api_client,
         cache=cache,
     )
 
@@ -76,8 +80,8 @@ async def main() -> None:
         F.data.startswith("target:"),
     )
 
+    dp.include_router(operation_router)
     dp.include_router(convert_router)
-    dp.include_router(operation_handler)
 
     logging.info("Bot started")
     await dp.start_polling(bot)

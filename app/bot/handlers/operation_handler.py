@@ -1,15 +1,17 @@
-from aiogram import Router, F
+from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
 from app.bot.states.conversion_state import ConversionState
 
+
 router = Router()
+
 
 @router.callback_query(F.data.startswith("operation:"))
 async def handle_operation_selection(
-        callback: CallbackQuery,
-        state: FSMContext,
+    callback: CallbackQuery,
+    state: FSMContext,
 ) -> None:
     operation_type = callback.data.split(":")[1]
 
@@ -17,6 +19,6 @@ async def handle_operation_selection(
     await state.set_state(ConversionState.waiting_for_amount)
 
     await callback.message.answer(
-        "Enter the amout to convert, for example: 100"
+        "Enter the amount to convert, for example: 100"
     )
     await callback.answer()
