@@ -2,6 +2,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
 from app.bot.keyboards.currency_keyboard import get_target_currency_keyboard
+from app.bot.keyboards.operation_keyboard import get_operation_keyboard
 from app.bot.states.conversion_state import ConversionState
 
 
@@ -35,10 +36,11 @@ class CurrencyCallbackHandler:
             base_currency=base_currency,
             target_currency=target_currency,
         )
-        await state.set_state(ConversionState.waiting_for_amount)
+        await state.set_state(ConversionState.waiting_for_operation)
 
         await callback.message.answer(
             f"Selected pair: {base_currency} → {target_currency}\n\n"
-            "Now enter the amount, for example: 100"
+            "Choose the operation type:",
+            reply_markup=get_operation_keyboard(),
         )
         await callback.answer()

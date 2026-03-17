@@ -14,6 +14,7 @@ from app.bot.handlers.start_handler import StartHandler
 from app.bot.handlers.rate_handler import RateHandler
 from app.bot.handlers.callback_handler import CurrencyCallbackHandler
 from app.bot.handlers.convert_handler import router as convert_router
+from app.bot.handlers.operation_handler import router as operation_handler
 from app.cache.currency_cache import CurrencyCache
 from app.clients.currency_api_client import CurrencyApiClient
 from app.services.currency_service import CurrencyService
@@ -76,6 +77,7 @@ async def main() -> None:
     )
 
     dp.include_router(convert_router)
+    dp.include_router(operation_handler)
 
     logging.info("Bot started")
     await dp.start_polling(bot)
