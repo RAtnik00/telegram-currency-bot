@@ -1,69 +1,75 @@
-from app.cache.currency_cache import CurrencyCache
-from app.clients.currency_api_client import CurrencyApiClient
+from decimal import Decimal
+
+from app.clients.base import CurrencyRatesProvider
+from app.models.currency_rate import CurrencyRate, RateType
 
 
 class CurrencyService:
     def __init__(
         self,
-        api_client: CurrencyApiClient,
-        cache: CurrencyCache | None = None,
+        general_rates_provider: CurrencyRatesProvider,
+        cash_rates_provider: CurrencyRatesProvider | None = None,
     ) -> None:
-        self._api_client = api_client
-        self._cache = cache or CurrencyCache()
+        self._general_rates_provider = general_rates_provider
+        self._cash_rates_provider = cash_rates_provider
 
-    def get_currency_rate(self, currency: str) -> dict[str, float] | None:
-        base_currency = currency.upper()
-        cache_key = f"rates:{base_currency}:EUR,GBP,PLN"
-
-        cached_rates = self._cache.get(cache_key)
-        if cached_rates is not None:
-            return cached_rates
-
-        rates = self._api_client.get_latest_rates(
-            base=base_currency,
-            symbols=["EUR", "GBP", "PLN"],
-        )
-
-        if rates:
-            self._cache.set(cache_key, rates)
-
-        return rates
-
-    def convert_currency(
+    def get_rate(
         self,
-        amount: float,
-        from_currency: str,
-        to_currency: str,
-    ) -> float | None:
-        if amount <= 0:
+        base_currency: str,
+        target_currency: str,
+        rate_type: RateType = "general",
+    ) -> CurrencyRate | None:
+        base_currency = base_currency.upper()
+        target_currency = target_currency.upper()
+
+        if base_currency == target_currency:
+            return CurrencyRate(
+                base_currency=base_currency,
+                target_currency=target_currency,
+                rate_type=rate_type,
+                value=Decimal("1"),
+                source="internal",
+            )
+
+        provider = self._select_provider(rate_type)
+        if provider is None:
             return None
 
-        source_currency = from_currency.upper()
-        target_currency = to_currency.upper()
-
-        if source_currency == target_currency:
-            return amount
-
-        cache_key = f"convert:{source_currency}:{target_currency}"
-
-        cached_rates = self._cache.get(cache_key)
-        if cached_rates is not None:
-            rate = cached_rates.get(target_currency)
-            if rate is not None:
-                return amount * rate
-
-        rates = self._api_client.get_latest_rates(
-            base=source_currency,
-            symbols=[target_currency],
+        return provider.get_rate(
+            base_currency=base_currency,
+            target_currency=target_currency,
+            rate_type=rate_type,
         )
 
-        if not rates:
-            return None
+    def convert(
+        self,
+        amount: Decimal,
+        base_currency: str,
+        target_currency: str,
+        rate_type: RateType = "general",
+    ) -> Decimal | None:
+        rate = self.get_rate(
+            base_currency=base_currency,
+            target_currency=target_currency,
+            rate_type=rate_type,
+        )
 
-        self._cache.set(cache_key, rates)
-
-        rate = rates.get(target_currency)
         if rate is None:
             return None
 
-        return amount * rate
+        return amount * rate.value
+
+    def _select_provider(
+        self,
+        rate_type: RateType,
+    ) -> CurrencyRatesProvider | None:
+        if rate_type == "general":
+            return self._general_rates_provider
+
+        if rate_type in ("buy", "sell"):
+            if self._cash_rates_provider is not None:
+                return self._cash_rates_provider
+
+            return self._general_rates_provider
+
+        return self._general_rates_provider
