@@ -1,7 +1,10 @@
+from decimal import Decimal
 import requests
 
+from app.clients.base import CurrencyRatesProvider
+from app.models.currency_rate import CurrencyRate, RateType
 
-class CurrencyApiClient:
+class CurrencyApiClient(CurrencyRatesProvider):
     def __init__(self, base_url: str = "https://api.frankfurter.app") -> None:
         self._base_url = base_url
 
@@ -35,3 +38,36 @@ class CurrencyApiClient:
 
         data = response.json()
         return data.get("rates")
+
+    def get_rate(
+            self,
+            base_currency: str,
+            target_currency: str,
+            rate_type: RateType = "general",
+    ) -> CurrencyRate | None:
+        try:
+            rates = self.get_latest_rates(
+                base=base_currency,
+                symbols=[target_currency],
+            )
+
+            if not rates:
+                return None
+
+            rate_value = rates.get(target_currency.upper())
+            if rate_value is None:
+                return None
+
+            return CurrencyRate(
+                base_currency=base_currency.upper(),
+                target_currency=target_currency.upper(),
+                rate_type="general",
+                value=Decimal(str(rate_value)),
+                source="frankfurter",
+            )
+        except requests.RequestException as error:
+            print(f"[CurrencyApiClient] request error: {error}")
+            return None
+        except (ValueError, TypeError) as error:
+            print(f"[CurrencyApiClient] data error: {error}")
+            return None
