@@ -82,6 +82,26 @@ async def main() -> None:
         callback_handler.handle_target_currency,
         F.data.startswith("target:"),
     )
+    dp.callback_query.register(
+        callback_handler.handle_base_currency,
+        F.data.startswith("base:"),
+    )
+    dp.callback_query.register(
+        callback_handler.handle_target_currency,
+        F.data.startswith("target:"),
+    )
+    dp.callback_query.register(
+        callback_handler.handle_base_currency_page,
+        F.data.startswith("page:base:"),
+    )
+    dp.callback_query.register(
+        callback_handler.handle_target_currency_page,
+        F.data.startswith("page:target:"),
+    )
+    dp.callback_query.register(
+        callback_handler.handle_noop,
+        F.data == "noop",
+    )
 
     dp.include_router(operation_router)
     dp.include_router(convert_router)

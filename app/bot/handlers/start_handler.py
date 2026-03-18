@@ -11,5 +11,5 @@ class StartHandler:
             "/rate USD - get exchange rates\n"
             "/convert 100 USD PLN - convert currency\n\n"
             "Or use the button below to start currency selection:",
-            reply_markup=get_base_currency_keyboard(),
+            reply_markup=get_base_currency_keyboard(page=0),
         )
