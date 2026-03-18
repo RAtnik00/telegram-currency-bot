@@ -17,10 +17,13 @@ class CurrencyCallbackHandler:
 
         _, base_currency = callback.data.split(":")
 
-        await callback.message.answer(
+        await callback.message.edit_text(
             f"Base currency selected: {base_currency}\n\n"
             "Now choose the target currency:",
-            reply_markup=get_target_currency_keyboard(base_currency=base_currency, page=0),
+            reply_markup=get_target_currency_keyboard(
+                base_currency=base_currency,
+                page=0,
+            ),
         )
         await callback.answer()
 
@@ -41,7 +44,7 @@ class CurrencyCallbackHandler:
         )
         await state.set_state(ConversionState.waiting_for_operation)
 
-        await callback.message.answer(
+        await callback.message.edit_text(
             f"Selected pair: {base_currency} → {target_currency}\n\n"
             "Choose the operation type:",
             reply_markup=get_operation_keyboard(),
@@ -60,8 +63,9 @@ class CurrencyCallbackHandler:
             "Welcome to Currency Bot!\n\n"
             "Available commands:\n"
             "/rate USD - get exchange rates\n"
-            "/convert 100 USD PLN - convert currency\n\n"
-            "Or use the button below to start currency selection:",
+            "/rate USD buy - get buy rates\n"
+            "/rate USD sell - get sell rates\n\n"
+            "Choose base currency:",
             reply_markup=get_base_currency_keyboard(page=page_number),
         )
         await callback.answer()

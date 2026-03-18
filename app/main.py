@@ -83,14 +83,6 @@ async def main() -> None:
         F.data.startswith("target:"),
     )
     dp.callback_query.register(
-        callback_handler.handle_base_currency,
-        F.data.startswith("base:"),
-    )
-    dp.callback_query.register(
-        callback_handler.handle_target_currency,
-        F.data.startswith("target:"),
-    )
-    dp.callback_query.register(
         callback_handler.handle_base_currency_page,
         F.data.startswith("page:base:"),
     )

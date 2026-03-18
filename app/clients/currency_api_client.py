@@ -1,12 +1,14 @@
 from decimal import Decimal
+
 import requests
 
 from app.clients.base import CurrencyRatesProvider
 from app.models.currency_rate import CurrencyRate, RateType
 
+
 class CurrencyApiClient(CurrencyRatesProvider):
-    def __init__(self, base_url: str = "https://api.frankfurter.app") -> None:
-        self._base_url = base_url
+    def __init__(self, base_url: str = "https://api.frankfurter.dev/v1") -> None:
+        self._base_url = base_url.rstrip("/")
 
     def get_rates(self, base_currency: str) -> dict[str, float]:
         response = requests.get(
@@ -40,10 +42,10 @@ class CurrencyApiClient(CurrencyRatesProvider):
         return data.get("rates")
 
     def get_rate(
-            self,
-            base_currency: str,
-            target_currency: str,
-            rate_type: RateType = "general",
+        self,
+        base_currency: str,
+        target_currency: str,
+        rate_type: RateType = "general",
     ) -> CurrencyRate | None:
         try:
             rates = self.get_latest_rates(
