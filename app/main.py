@@ -10,6 +10,7 @@ from aiogram.enums import ParseMode
 from aiogram.filters import Command
 from aiogram.fsm.storage.memory import MemoryStorage
 
+from app.bot.commands import set_main_menu
 from app.bot.handlers.callback_handler import CurrencyCallbackHandler
 from app.bot.handlers.convert_handler import router as convert_router
 from app.bot.handlers.operation_handler import router as operation_router
@@ -42,6 +43,8 @@ async def main() -> None:
         token=bot_token,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
+
+    await set_main_menu(bot)
 
     storage = MemoryStorage()
 
