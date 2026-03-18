@@ -99,22 +99,42 @@ class CurrencyService:
 
         return amount * rate.value
 
-    def get_currency_rate(self, currency: str) -> dict[str, Decimal] | None:
+    def get_currency_rate(self, currency: str) -> dict[str, dict[str, Decimal]] | None:
         base_currency = currency.upper()
         symbols = ["EUR", "GBP", "PLN"]
-        result: dict[str, Decimal] = {}
+        result: dict[str, dict[str, Decimal]] = {}
 
         for target_currency in symbols:
             if target_currency == base_currency:
                 continue
 
-            rate = self.get_rate(
+            general_rate = self.get_rate(
                 base_currency=base_currency,
                 target_currency=target_currency,
                 rate_type="general",
             )
-            if rate is not None:
-                result[target_currency] = rate.value
+            buy_rate = self.get_rate(
+                base_currency=base_currency,
+                target_currency=target_currency,
+                rate_type="buy",
+            )
+            sell_rate = self.get_rate(
+                base_currency=base_currency,
+                target_currency=target_currency,
+                rate_type="sell",
+            )
+
+            if general_rate is None and buy_rate is None and sell_rate is None:
+                continue
+
+            result[target_currency] = {}
+
+            if general_rate is not None:
+                result[target_currency]["general"] = general_rate.value
+            if buy_rate is not None:
+                result[target_currency]["buy"] = buy_rate.value
+            if sell_rate is not None:
+                result[target_currency]["sell"] = sell_rate.value
 
         return result or None
 
