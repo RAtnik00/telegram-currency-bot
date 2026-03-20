@@ -6,40 +6,39 @@ from app.clients.base import CurrencyRatesProvider
 from app.models.currency_rate import CurrencyRate, RateType
 
 
-class CurrencyApiClient(CurrencyRatesProvider):
-    def __init__(self, base_url: str = "https://api.frankfurter.dev/v1") -> None:
+class ErApiClient(CurrencyRatesProvider):
+    def __init__(self, base_url: str = "https://open.er-api.com/v6") -> None:
         self._base_url = base_url.rstrip("/")
-
-    def get_rates(self, base_currency: str) -> dict[str, float]:
-        response = requests.get(
-            f"{self._base_url}/latest",
-            params={"base": base_currency.upper()},
-            timeout=10,
-        )
-        response.raise_for_status()
-
-        data = response.json()
-        return data.get("rates", {})
 
     def get_latest_rates(
         self,
         base: str,
         symbols: list[str] | None = None,
     ) -> dict[str, float] | None:
-        params = {"base": base.upper()}
-
-        if symbols:
-            params["symbols"] = ",".join(symbol.upper() for symbol in symbols)
-
         response = requests.get(
-            f"{self._base_url}/latest",
-            params=params,
+            f"{self._base_url}/latest/{base.upper()}",
             timeout=10,
         )
         response.raise_for_status()
 
         data = response.json()
-        return data.get("rates")
+
+        if data.get("result") != "success":
+            return None
+
+        rates = data.get("rates")
+        if not isinstance(rates, dict):
+            return None
+
+        if symbols:
+            allowed = {symbol.upper() for symbol in symbols}
+            return {
+                code: value
+                for code, value in rates.items()
+                if code.upper() in allowed
+            }
+
+        return rates
 
     def get_rate(
         self,
@@ -65,11 +64,11 @@ class CurrencyApiClient(CurrencyRatesProvider):
                 target_currency=target_currency.upper(),
                 rate_type="general",
                 value=Decimal(str(rate_value)),
-                source="frankfurter",
+                source="er-api",
             )
         except requests.RequestException as error:
-            print(f"[CurrencyApiClient] request error: {error}")
+            print(f"[ErApiClient] request error: {error}")
             return None
         except (ValueError, TypeError) as error:
-            print(f"[CurrencyApiClient] data error: {error}")
+            print(f"[ErApiClient] data error: {error}")
             return None

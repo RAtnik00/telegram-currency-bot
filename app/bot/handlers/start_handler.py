@@ -9,7 +9,8 @@ class StartHandler:
             "Welcome to Currency Bot!\n\n"
             "Available commands:\n"
             "/rate USD - get exchange rates\n"
-            "/convert 100 USD PLN - convert currency\n\n"
-            "Or use the button below to start currency selection:",
-            reply_markup=get_base_currency_keyboard(),
+            "/rate USD buy - get buy rates\n"
+            "/rate USD sell - get sell rates\n\n"
+            "Choose base currency:",
+            reply_markup=get_base_currency_keyboard(page=0),
         )

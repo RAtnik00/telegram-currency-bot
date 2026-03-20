@@ -10,6 +10,7 @@ from aiogram.enums import ParseMode
 from aiogram.filters import Command
 from aiogram.fsm.storage.memory import MemoryStorage
 
+from app.bot.commands import set_main_menu
 from app.bot.handlers.callback_handler import CurrencyCallbackHandler
 from app.bot.handlers.convert_handler import router as convert_router
 from app.bot.handlers.operation_handler import router as operation_router
@@ -18,6 +19,8 @@ from app.bot.handlers.start_handler import StartHandler
 from app.cache.currency_cache import CurrencyCache
 from app.clients.currency_api_client import CurrencyApiClient
 from app.clients.nbp_cash_rates_client import NbpCashRatesClient
+from app.clients.er_api_client import ErApiClient
+from app.clients.fallback_currency_client import FallbackCurrencyClient
 from app.services.currency_service import CurrencyService
 from app.validators.currency_validator import CurrencyValidator
 
@@ -43,9 +46,17 @@ async def main() -> None:
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
 
+    await set_main_menu(bot)
+
     storage = MemoryStorage()
 
-    general_api_client = CurrencyApiClient()
+    primary_general_client = CurrencyApiClient()
+    secondary_general_client = ErApiClient()
+    general_api_client = FallbackCurrencyClient(
+        primary_provider=primary_general_client,
+        secondary_provider=secondary_general_client,
+    )
+
     cash_api_client = NbpCashRatesClient()
     cache = CurrencyCache(ttl_seconds=300)
     currency_validator = CurrencyValidator()
@@ -78,6 +89,18 @@ async def main() -> None:
     dp.callback_query.register(
         callback_handler.handle_target_currency,
         F.data.startswith("target:"),
+    )
+    dp.callback_query.register(
+        callback_handler.handle_base_currency_page,
+        F.data.startswith("page:base:"),
+    )
+    dp.callback_query.register(
+        callback_handler.handle_target_currency_page,
+        F.data.startswith("page:target:"),
+    )
+    dp.callback_query.register(
+        callback_handler.handle_noop,
+        F.data == "noop",
     )
 
     dp.include_router(operation_router)
