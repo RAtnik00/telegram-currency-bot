@@ -19,6 +19,8 @@ from app.bot.handlers.start_handler import StartHandler
 from app.cache.currency_cache import CurrencyCache
 from app.clients.currency_api_client import CurrencyApiClient
 from app.clients.nbp_cash_rates_client import NbpCashRatesClient
+from app.clients.er_api_client import ErApiClient
+from app.clients.fallback_currency_client import FallbackCurrencyClient
 from app.services.currency_service import CurrencyService
 from app.validators.currency_validator import CurrencyValidator
 
@@ -48,7 +50,13 @@ async def main() -> None:
 
     storage = MemoryStorage()
 
-    general_api_client = CurrencyApiClient()
+    primary_general_client = CurrencyApiClient()
+    secondary_general_client = ErApiClient()
+    general_api_client = FallbackCurrencyClient(
+        primary_provider=primary_general_client,
+        secondary_provider=secondary_general_client,
+    )
+
     cash_api_client = NbpCashRatesClient()
     cache = CurrencyCache(ttl_seconds=300)
     currency_validator = CurrencyValidator()
